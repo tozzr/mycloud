@@ -1,0 +1,34 @@
+#header(style='display:none;')
+	h1= 'myCloud'
+	a(id='logout', href='javascript:;') logout
+	a(href='/user') logged in as user |&nbsp;
+	br
+	br
+	h2#dirpath
+
+#action(style='display:none;')
+	a(id='createDir', href='javascript:;')= 'new directory' 
+	a(id='newFile', href='javascript:;')= 'upload file'
+
+#loginDialog(style='display: none;', title='login')
+	form(id='loginForm', name='loginForm', method='post', action='/login')
+		input(type='text', name='username')
+		br
+		input(type='password', name='password')
+		
+#newDirDialog(style='display: none;', title='new directory')
+	form(id='newDirForm', method='post', action='javascript:;')
+		input(id='newDirName', type='text', name='newDirName')
+
+form(id='deleteItemForm', method='post', action='javascript:;')
+	input(type='hidden', name='_method', value='DELETE')
+	
+table(id='fileTable',cellspacing=0, style='display: none;')
+	tr(class='parent')
+		td(class='icon')
+			img(src='/images/up.png', width=16, height=16)
+		td
+			a(href='javascript:;',class='parentdir')= 'parent directory'
+		td(class='size')
+		td
+		
