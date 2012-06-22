@@ -12,7 +12,7 @@ exports.auth = function(req, res) {
 	var data = new Object();
 	data['sID'] = req.session.id;
 	
-	if (username == 'admin' && password == 'pasword') {
+	if (username == 'admin' && password == 'password') {
 		req.session.user = { name: username };
 		data['status'] = 'ok';
 		console.log('login  ' + req.session.id);

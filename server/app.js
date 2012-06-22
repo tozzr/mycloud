@@ -7,10 +7,6 @@ var app = module.exports = express.createServer();
 // Configuration
 global.BASE_DIR = 'F:\\tmp\\mycloud_server';
 
-fs.watch(BASE_DIR, function(event, filename) {
-	console.log('watch: ' + event + ' ' + filename);
-});
-
 app.configure(function(){
   app.set('views', __dirname + '/views');
   app.set('view engine', 'jade');

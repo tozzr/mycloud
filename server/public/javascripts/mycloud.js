@@ -54,8 +54,10 @@ $(document).ready(function(){
 					var dialog = $(this);
 					if ($('#newDirName').val() != '')
 						$.post('/dir'+dirpath, $('#newDirForm').serialize(), function(result) {
-							getDirEntries();
-							$(dialog).dialog('close');
+							if (result == 'ok') {
+								getDirEntries();
+								$(dialog).dialog('close');
+							}
 						}); 
 				}
 			}

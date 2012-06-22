@@ -9,6 +9,8 @@ var dir_info = require('./lib/dir_info.js');
 var file_download = require('./lib/file_download.js');
 var file_upload = require('./lib/file_upload.js');
 
+var utils = require('./lib/utils.js');
+
 var config = {
 	host: 'localhost',
 	port: 25811,
@@ -20,6 +22,8 @@ var config = {
 	basepath: 'F:\\tmp\\mycloud_client',
 	cookie: 'undefined'
 };
+
+var cookieJar= null;
 
 stalker.watch(
 	config.basepath, 
@@ -37,8 +41,12 @@ stalker.watch(
 var upload = function(path, dirEntry, callback) {
 	console.log('upload ' + path + ' newer on client');
 	if (dirEntry.type == 'dir') {
-		console.log('=> is dir.');
-		callback();
+		var basedir = utils.parentdirFromPath(path);
+		request.post({url: config.url + '/dir' + basedir, form: {newDirName: path}, jar: cookieJar}, 
+			function (error, response, body) {
+				callback();
+			}
+		);
 	}
 	else {
 		file_upload.post(config, path, dirEntry.changed, function(err){
@@ -51,22 +59,58 @@ var download = function(path, dirEntry, callback) {
 	console.log('download ' + path + ' newer on server');
 	
 	var diskpath = config.basepath + path;
+	var filetime = new Date(parseInt(dirEntry.changed));
+	
 	if (dirEntry.type == 'dir') {
-		console.log('=> is dir.');
 		fs.mkdir(diskpath, callback);
 	}
 	else {
-		var filetime = new Date(dirEntry.changed);
 		file_download.get(config, path, function(err) {
 			console.log('download ' + config.url + '/files' +  path + ' done.');
-			console.log('filetime should be ' + filetime);
 			fs.utimes(diskpath, filetime, filetime, function(err){
-				if (err) console.log('utime err: ' + err);
-				console.log('time set to ' + filetime);
 				callback();
 			});
 		});
 	}
+};
+
+var whatToDo = function (clientEntry, serverEntry) {
+	if (clientEntry === undefined && serverEntry === undefined)
+		return 'nothing';
+		
+	if (serverEntry === undefined && clientEntry !== undefined)
+		if (clientEntry.state == 'active')
+			return 'upload_init';
+		else
+			return 'nothing';
+			
+	if (clientEntry === undefined && serverEntry !== undefined)
+		if (serverEntry.state == 'active')
+			return 'download_init';
+		else
+			return 'nothing';
+			
+	if (clientEntry.state == 'active' && serverEntry.state == 'active')
+		if (clientEntry.changed < serverEntry.changed)
+			return 'download_update';
+		else if (clientEntry.changed > serverEntry.changed)
+			return 'upload_update';
+		else
+			return 'nothing';
+			
+	if (clientEntry.state == 'deleted' && serverEntry.state == 'active')
+		if (clientEntry.changed <= serverEntry.changed)
+			return 'download_update';
+		else if (clientEntry.changed > serverEntry.changed)
+			return 'delete_server';
+
+	if (clientEntry.state == 'active' && serverEntry.state == 'deleted')
+		if (clientEntry.changed < serverEntry.changed)
+			return 'delete_client';
+		else if (clientEntry.changed > serverEntry.changed)
+			return 'upload_update';	
+	
+	return 'nothing';
 };
 
 var syncWithServer = function (clientList, serverList, callback) {
@@ -83,30 +127,41 @@ var syncClientToServer = function (clientList, serverList, callback) {
 	if (!remaining) return callback(clientList, serverList);
 		
 	for (path in clientList) {
-		if (serverList[path] === undefined && clientList[path].state == 'active') {
-			console.log('1');
+		var action = whatToDo(clientList[path], serverList[path]);
+		console.log(path + ': ' + action);
+		if (action == 'upload_init' || action == 'upload_update') { 
 			upload(path, clientList[path], function() {
-				serverList[path] = clientList[path];
 				if (!--remaining) callback(clientList, serverList);
 			});
 		}
-		else if (clientList[path].state == 'active' && serverList[path].state == 'active') { 
-			if (parseInt(clientList[path].changed) < parseInt(serverList[path].changed)) {
-				console.log('2');
-				download(path, serverList[path], function(){
+		else if (action == 'download_init' || action == 'download_update') { 
+			download(path, serverList[path], function(){
+				if (action == 'download_update')
 					clientList[path].changed = serverList[path].changed;
-					if (!--remaining) callback(clientList, serverList);
-				});
-			}
-			else if (parseInt(clientList[path].changed) > parseInt(serverList[path].changed)) {
-				console.log('3');
-				upload(path, clientList[path], function () {
-					serverList[path].changed = clientList[path].changed;
-					if (!--remaining) callback(clientList, serverList);
-				});
-			}
-			else
 				if (!--remaining) callback(clientList, serverList);
+			});
+		}
+		else if (action == 'delete_client') {
+			if (clientList[path].type == 'file') {
+				fs.unlink(config.basepath + path, function(err) {
+					if (err) throw err;
+					clientList[path].changed = serverList[path].changed;
+					clientList[path].state = 'deleted';
+					if (!--remaining) callback(clientList, serverList);
+				});
+			}
+			else {
+				utils.rmdirRecursive(config.basepath + path);
+			}
+		}
+		else if (action == 'delete_server') {
+			var type = clientList[path].type == 'dir' ? '/dir' : '/files';
+			var url = config.url + type + path;
+			console.log('.....' + url);
+			request.del({url: url, jar: cookieJar}, function (error, response, body) {
+				if (error) console.log(error + ': ' + body);
+				if (!--remaining) callback(clientList, serverList);
+			});
 		}
 		else {
 			if (!--remaining) callback(clientList, serverList);
@@ -120,32 +175,36 @@ var syncServerToClient = function (clientList, serverList, callback) {
 	if (!remaining) return callback(null);
 	
 	for (path in serverList) {
-		if (path.indexOf('/') == 0) {
-			if (clientList[path] === undefined && serverList[path].state == 'active') {
-				download(path, serverList[path], function() {
-					if (!--remaining) callback(null);
-				});
-			}
-			else if (clientList[path].state == 'active' && serverList[path].state == 'active') { 
-				if (parseInt(clientList[path].changed) < parseInt(serverList[path].changed)) {
-					download(path, serverList[path], function() {
-						if (!--remaining) callback(null);
-					});
-				}
-				else if (parseInt(clientList[path].changed) > parseInt(serverList[path].changed)) {
-					upload(path, clientList[path], function() {
-						if (!--remaining) callback(null);
-					});
-				}
-				else
-					if (!--remaining) callback(null);
-			}
-			else {
-				if (!--remaining) callback(null);
-			}
+		var action = whatToDo(clientList[path], serverList[path]);
+		console.log(path + ': ' + action);
+		if (action == 'upload_init' || action == 'upload_update') { 
+			upload(path, clientList[path], function() {
+				if (!--remaining) callback(clientList, serverList);
+			});
 		}
-		else
-			if (!--remaining) callback(null);
+		else if (action == 'download_init' || action == 'download_update') { 
+			download(path, serverList[path], function(){
+				if (action == 'download_update')
+					clientList[path].changed = serverList[path].changed;
+				if (!--remaining) callback(clientList, serverList);
+			});
+		}
+		else if (action == 'delete_client') {
+			fs.unlink(config.basepath + path, function(err) {
+				if (err) throw err;
+				if (!--remaining) callback(clientList, serverList);
+			});
+		}
+		else if (action == 'delete_server') {
+			var type = clientList[path].type == 'dir' ? '/dir' : '/files';
+			request.del({url: config.url + type + path, jar: cookieJar}, function (error, response, body) {
+				if (error) console.log(error + ': ' + body);
+				if (!--remaining) callback(clientList, serverList);
+			});
+		}
+		else {
+			if (!--remaining) callback(clientList, serverList);
+		}
 	}
 };
 
@@ -155,15 +214,15 @@ var monitorFilesystem = function (path) {
 	action = true;
 	dir_info.syncDBWithFS(path, function(err, dbList) {
 		if (err) throw err;
-		var j = request.jar();
-		request.post({url: config.url + '/login', form: config.credentials, jar: j}, function _login(error, response, body) {
+		cookieJar = request.jar();
+		request.post({url: config.url + '/login', form: config.credentials, jar: cookieJar}, function _login(error, response, body) {
 			if (!error && response.statusCode == 200) {
-				config.cookie = j.cookies[0].name + '=' + j.cookies[0].value;
-				request({url: config.url + '/filelist', jar: j}, function _getServerFileList(error, response, body) {
+				config.cookie = cookieJar.cookies[0].name + '=' + cookieJar.cookies[0].value;
+				request({url: config.url + '/filelist', jar: cookieJar}, function _getServerFileList(error, response, body) {
 					if (!error && response.statusCode == 200) {
 						var serverList = JSON.parse(body);
 						syncWithServer(dbList, serverList, function(err) {
-							request.get({url: config.url + '/logout', jar: j}, function _logout(error, response, body) {
+							request.get({url: config.url + '/logout', jar: cookieJar}, function _logout(error, response, body) {
 								if (!error && response.statusCode == 200) {
 									console.log('\n' + new Date() + '\n');
 									action = false;

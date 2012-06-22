@@ -71,7 +71,7 @@ exports.filelist = function(req, res) {
 exports.formUploadData = function(req, res) {
 	var dir = utils.dirFromParam(req.params[0]);
 	var tmp_path = req.files.uploadfile.path;
-	console.log('form upload ' + JSON.stringify(req.body));
+	
 	res.writeHead(200, {'Content-Type': 'application/json'});
 	var data = { status: 'ok' };
 	
@@ -109,12 +109,12 @@ exports.formUploadData = function(req, res) {
 
 exports.deleteFile = function (req, res) {
 	var dir = utils.dirFromParam(req.params[0]);
-	var parentdir = utils.parentdirFromPath(dir);
 	var filepath = BASE_DIR + dir;
-	
-	fs.unlink(filepath, function(err) {
-        if (err) throw err;
-        res.redirect('/files'+parentdir);
+	console.log('delete ' + filepath);
+	fs.unlink(filepath, function(error) {
+		res.writeHead(200, {'Content-Type': 'text/plain'});
+        if (err) res.end(error);
+        else res.end('ok');
     });
 };
 
@@ -123,7 +123,8 @@ exports.createDirectory = function(req, res) {
 	var path = BASE_DIR + dir + '\\' + req.body.newDirName;
 	
 	fs.mkdir(path, 0755, function(err) {
-		res.redirect('/files'+dir);
+		res.writeHead(200, {'Content-Type': 'text/plain'});
+		res.end('ok');
 	});
 };
 
@@ -133,7 +134,8 @@ exports.deleteDirectory = function(req, res) {
 	var path = BASE_DIR + dir;
 	
 	utils.rmdirRecursive(path);
-	res.redirect('/files'+parentdir);
+	res.writeHead(200, {'Content-Type': 'text/plain'});
+	res.end('ok');
 };
 
 /*
