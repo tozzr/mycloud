@@ -1,13 +1,14 @@
-var fs = require('fs'), 
-     db = require('./db.js');
+var fs = require('fs'); 
+var db = require('./db.js');
 
 var basepathLength = 0;
 
-var DirEntry = function(type, size, changed) {
+var DirEntry = function(type, size, filetime) {
 	this.type = type;
 	this.size = size;
 	this.state = 'active';
-	this.changed = changed;
+	this.filetime = filetime
+	this.version = 0;
 };
 var getFSFileList = function(path, callback) {
 	getDirEntries(path, callback);
@@ -44,24 +45,40 @@ var getDirEntries = function(path, callback) {
 
 var synchLists = function (dbList, fsList, callback) {
 	for (path in dbList) {
-		if (fsList[path] === undefined) {
-			dbList[path].state = 'deleted';
-			dbList[path].changed = new Date().getTime();
+		if (fsList[path] === undefined) { // not in fs
+			if (dbList[path].state == 'active') {
+				dbList[path].state = 'deleted';
+				dbList[path].version = incrementVersion(dbList[path]);
+			}
 		}
-		else {
-			dbList[path].state = 'active';
+		else { // in fs
+			if (dbList[path].state == 'deleted') {
+				dbList[path].state = 'active';
+				dbList[path].version = incrementVersion(dbList[path]);
+			}
+			else if (dbList[path].filetime != fsList[path].filetime) {
+				dbList[path].filetime = fsList[path].changed;
+				dbList[path].version = incrementVersion(dbList[path]);
+			}
+			
 			dbList[path].size = fsList[path].size;
-			dbList[path].changed = fsList[path].changed;
+			delete fsList[path];
 		}
+		console.log(path + ' ' + dbList[path].version);
 	}
 	
 	for (path in fsList) {
-		if (typeof dbList[path] == 'undefined') {
+		if (dbList[path] === undefined) {
 			dbList[path] = fsList[path];
+			console.log(path + ' ' + dbList[path].version);
 		}
 	}
-	
+
 	callback(dbList);
+};
+
+var incrementVersion = function (listEntry) {
+	return parseInt(listEntry.version) + 1;
 };
 
 exports.syncDBWithFS = function (basepath, callback) {

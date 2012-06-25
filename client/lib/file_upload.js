@@ -2,7 +2,7 @@ var http = require('http');
 var fs = require('fs');
 var mime = require('mime');
 
-var utils = require('./utils.js');
+var utils = require('../../common-lib/utils.js');
 
 function encodeFieldPart(boundary,name,value) {
     var return_part = "--" + boundary + "\r\n";
@@ -40,7 +40,7 @@ function makePost(config, filepath, post_data, boundary, callback) {
   var post_request = http.request(post_options, function(response){
     response.setEncoding('binary');
     response.on('data', function(chunk){
-      console.log('post file request: ' + chunk);
+      //changeTime += chunk;
     });
 	response.on('end', function() {
 		callback(null);
@@ -53,12 +53,13 @@ function makePost(config, filepath, post_data, boundary, callback) {
   post_request.end();
 }
 
-exports.post = function (config, filepath, filetime, callback) {
+exports.post = function (config, filepath, dirEntry, callback) {
   var boundary = Math.random();
   var post_data = [];
-
-  post_data.push(new Buffer(encodeFieldPart(boundary, 'filetime', filetime), 'ascii'));
-  post_data.push(new Buffer(encodeFilePart(boundary, 'application/octet-stream', 'uploadfile', filepath), 'ascii'));
+  console.log('post ' + JSON.stringify(dirEntry));
+  post_data.push(new Buffer(encodeFieldPart(boundary, 'filetime', dirEntry.filetime), 'ascii'));
+  post_data.push(new Buffer(encodeFieldPart(boundary, 'version', dirEntry.version), 'ascii'));
+  post_data.push(new Buffer(encodeFilePart(boundary, 'application/octet-stream', 'uploadfile', encodeURI(filepath)), 'ascii'));
 
   var file_reader = fs.createReadStream(config.basepath + filepath, {encoding: 'binary'});
   var file_contents = '';

@@ -1,11 +1,13 @@
 var express = require('express')
   , routes = require('./routes')
-  , fs = require('fs');
+  , fs = require('fs')
+  , dir_info = require('../common-lib/dir_info.js');
 
 var app = module.exports = express.createServer();
 
 // Configuration
 global.BASE_DIR = 'F:\\tmp\\mycloud_server';
+global.files = null;
 
 app.configure(function(){
   app.set('views', __dirname + '/views');
@@ -46,6 +48,11 @@ app.get('/login', routes.loginForm);
 app.post('/login', routes.loginAuth);
 app.get('/logout', routes.logout);
 
-app.listen(25811, function(){
-  console.log("mycloud server listening on port %d in %s mode", app.address().port, app.settings.env);
+dir_info.syncDBWithFS(BASE_DIR, function(err, data) {
+	if (err) throw err;
+	files = data;
+	console.log('synced db with fs');
+	app.listen(25811, function(){
+		console.log("mycloud server listening on port %d in %s mode", app.address().port, app.settings.env);
+	});
 });

@@ -1,16 +1,14 @@
 var fs = require('fs');
 var login = require('./login.js');
-var upload = require('./upload.js');
-var utils = require('../utils');
-var dir_info = require('../lib/dir_info.js');
+
+var utils = require('../../common-lib/utils.js');
+var dir_info = require('../../common-lib/dir_info.js');
+var db = require('../../common-lib/db.js');
 
 exports.loginForm = login.form;
 exports.loginAuth = login.auth;
 exports.logout = login.logout;
 exports.authRequired = login.authRequired;
-
-exports.uploadForm = upload.form;
-exports.upload = upload.processData;
 
 exports.index = function (req, res) {
 	res.render('index', { title: 'myCloud' });
@@ -59,13 +57,9 @@ exports.files = function(req, res){
 };
 
 exports.filelist = function(req, res) {
-	dir_info.syncDBWithFS('F:\\tmp\\mycloud_server', function(err, data) {
-		if (err) throw err;
-		data.status = 'ok';
-		res.writeHead(200, {'Content-Type': 'application/json'});
-		res.end( JSON.stringify(data) );
-	});
-	
+	files.status = 'ok';
+	res.writeHead(200, {'Content-Type': 'application/json'});
+	res.end( JSON.stringify(files) );
 };
 
 exports.formUploadData = function(req, res) {
@@ -84,19 +78,21 @@ exports.formUploadData = function(req, res) {
 		return;
 	}
 	
-	var target_path = BASE_DIR + dir + '\\' + req.files.uploadfile.name;
+	var path = dir + decodeURI(req.files.uploadfile.name);
+	var target_path = BASE_DIR + path;
 	
 	var target_file = fs.createWriteStream(target_path);
 	target_file.on('close', function() {
 		fs.unlink(tmp_path, function(err) {
-            //if (err) console.log(err);
-			if (req.body.filetime) {
-				var filetime = new Date(parseInt(req.body.filetime));
-				fs.utimes(target_path, filetime, filetime, function(err){
-					if (err) console.log('utime err: ' + err);
+            var filetime = req.body.filetime ? new Date(parseInt(req.body.filetime)) : new Date();
+			var version = parseInt(req.body.version) >= 0 ? parseInt(req.body.version) : 0;
+			fs.utimes(target_path, filetime, filetime, function(err){
+				if (err) console.log('utime err: ' + err);
+				files[path] = {type: 'file', state: 'active', filetime: filetime.getTime(), version: version};
+				db.save('files', files, function (err) {
 					res.end( JSON.stringify(data) );
 				});
-			}
+			});
         });
 	});
 	
@@ -108,13 +104,16 @@ exports.formUploadData = function(req, res) {
 };
 
 exports.deleteFile = function (req, res) {
-	var dir = utils.dirFromParam(req.params[0]);
-	var filepath = BASE_DIR + dir;
-	console.log('delete ' + filepath);
+	var path = utils.dirFromParam(req.params[0]);
+	var filepath = BASE_DIR + path;
+	console.log(new Date().getTime() + ': delete ' + filepath);
 	fs.unlink(filepath, function(error) {
-		res.writeHead(200, {'Content-Type': 'text/plain'});
-        if (err) res.end(error);
-        else res.end('ok');
+		files[path].state = 'deleted';
+		files[path].version = parseInt(files[path].version) + 1;
+		db.save('files', files, function (err) {
+			res.writeHead(200, {'Content-Type': 'text/plain'});
+			res.end('ok');
+		});
     });
 };
 

@@ -1,9 +1,0 @@
-h1= title
-	
-div#upload
-	form(method='post', action='/files'+dir, enctype='multipart/form-data')
-		input(type='file',name='uploadfile',value='')
-		br
-		br
-		input(type='submit',name='upload',value='upload')
-		input(type='reset',name='cancel',value='cancel',onclick='window.history.back()')

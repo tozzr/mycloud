@@ -15,7 +15,7 @@ exports.auth = function(req, res) {
 	if (username == 'admin' && password == 'password') {
 		req.session.user = { name: username };
 		data['status'] = 'ok';
-		console.log('login  ' + req.session.id);
+		console.log(new Date().getTime() + ': login  ' + req.session.id);
 	}
 	else { 
 		data['status'] = 'fail';
@@ -25,7 +25,7 @@ exports.auth = function(req, res) {
 };
 
 exports.logout = function(req, res) {
-	console.log('logout ' + req.session.id);
+	console.log(new Date().getTime() + ': logout ' + req.session.id);
 	res.send('ok: logged out sucessful');
 	req.session.destroy(function(){});
 };

@@ -2,7 +2,7 @@ var fs = require('fs');
 var	path = require('path');
 
 exports.dirFromParam = function (dir) {
-	dir = dir == undefined || dir == '/' ? '' : dir;
+	dir = dir == undefined || dir == '/' ? '' : decodeURI(dir);
 	dir = dir.replace(/\.\./g, '');
 	dir = dir.replace('//', '/');
 	return dir;
