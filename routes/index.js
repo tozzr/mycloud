@@ -1,9 +1,11 @@
 var fs = require('fs');
 var login = require('./login.js');
 
-var utils = require('../../common-lib/utils.js');
-var dir_info = require('../../common-lib/dir_info.js');
-var db = require('../../common-lib/db.js');
+var utils = require('../lib/utils.js');
+var dir_info = require('../lib/dir_info.js');
+var db = require('../lib/db.js');
+
+var serverConfig = require('../serverConfig');
 
 exports.loginForm = login.form;
 exports.loginAuth = login.auth;
@@ -18,7 +20,8 @@ exports.files = function(req, res){
 	var dir = utils.dirFromParam(req.params[0]);
 	var parentdir = utils.parentdirFromPath(dir);
   
-	var path = BASE_DIR + dir;
+	var path = serverConfig.data.basepath + dir;
+	console.log('list: ' + path);
 	var stats = fs.statSync(path);
   
 	if (stats.isDirectory()) {
@@ -57,9 +60,9 @@ exports.files = function(req, res){
 };
 
 exports.filelist = function(req, res) {
-	files.status = 'ok';
+	serverConfig.data.files.status = 'ok';
 	res.writeHead(200, {'Content-Type': 'application/json'});
-	res.end( JSON.stringify(files) );
+	res.end( JSON.stringify(serverConfig.data.files) );
 };
 
 exports.formUploadData = function(req, res) {
@@ -79,8 +82,8 @@ exports.formUploadData = function(req, res) {
 	}
 	
 	var path = dir + decodeURI(req.files.uploadfile.name);
-	var target_path = BASE_DIR + path;
-	
+	var target_path = serverConfig.data.basepath + path;
+	console.log('upload: ' + target_path);
 	var target_file = fs.createWriteStream(target_path);
 	target_file.on('close', function() {
 		fs.unlink(tmp_path, function(err) {
@@ -88,8 +91,8 @@ exports.formUploadData = function(req, res) {
 			var version = parseInt(req.body.version) >= 0 ? parseInt(req.body.version) : 0;
 			fs.utimes(target_path, filetime, filetime, function(err){
 				if (err) console.log('utime err: ' + err);
-				files[path] = {type: 'file', state: 'active', filetime: filetime.getTime(), version: version};
-				db.save('files', files, function (err) {
+				serverConfig.data.files[path] = {type: 'file', state: 'active', filetime: filetime.getTime(), version: version};
+				db.save(serverConfig.data.dbName, serverConfig.data.files, function (err) {
 					res.end( JSON.stringify(data) );
 				});
 			});
@@ -105,12 +108,12 @@ exports.formUploadData = function(req, res) {
 
 exports.deleteFile = function (req, res) {
 	var path = utils.dirFromParam(req.params[0]);
-	var filepath = BASE_DIR + path;
+	var filepath = serverConfig.data.basepath + path;
 	console.log(new Date().getTime() + ': delete ' + filepath);
 	fs.unlink(filepath, function(error) {
-		files[path].state = 'deleted';
-		files[path].version = parseInt(files[path].version) + 1;
-		db.save('files', files, function (err) {
+		serverConfig.data.files[path].state = 'deleted';
+		serverConfig.data.files[path].version = parseInt(serverConfig.data.files[path].version) + 1;
+		db.save(serverConfig.data.dbName, serverConfig.data.files, function (err) {
 			res.writeHead(200, {'Content-Type': 'text/plain'});
 			res.end('ok');
 		});
@@ -119,7 +122,7 @@ exports.deleteFile = function (req, res) {
 
 exports.createDirectory = function(req, res) {
 	var dir = utils.dirFromParam(req.params[0]);
-	var path = BASE_DIR + dir + '\\' + req.body.newDirName;
+	var path = serverConfig.data.basepath + dir + '\\' + req.body.newDirName;
 	
 	fs.mkdir(path, 0755, function(err) {
 		res.writeHead(200, {'Content-Type': 'text/plain'});
@@ -130,7 +133,7 @@ exports.createDirectory = function(req, res) {
 exports.deleteDirectory = function(req, res) {
 	var dir = utils.dirFromParam(req.params[0]);
 	var parentdir = utils.parentdirFromPath(dir);
-	var path = BASE_DIR + dir;
+	var path = serverConfig.data.basepath + dir;
 	
 	utils.rmdirRecursive(path);
 	res.writeHead(200, {'Content-Type': 'text/plain'});

@@ -1,13 +1,15 @@
 var express = require('express')
   , routes = require('./routes')
   , fs = require('fs')
-  , dir_info = require('../common-lib/dir_info.js');
+  , stalker = require('stalker');
+
+var db = require('./lib/db.js');  
+var dir_info = require('./lib/dir_info.js');
 
 var app = module.exports = express.createServer();
 
 // Configuration
-global.BASE_DIR = 'F:\\tmp\\mycloud_server';
-global.files = null;
+var serverConfig = require('./serverConfig');
 
 app.configure(function(){
   app.set('views', __dirname + '/views');
@@ -48,11 +50,32 @@ app.get('/login', routes.loginForm);
 app.post('/login', routes.loginAuth);
 app.get('/logout', routes.logout);
 
-dir_info.syncDBWithFS(BASE_DIR, function(err, data) {
+stalker.watch(
+	serverConfig.data.basepath, 
+	{buffer: serverConfig.data.fs_event_timeout}, 
+	function (err, file) {
+		if (err) console.log(err);
+		monitorFilesystem();
+	},
+	function (err, file) {
+		if (err) console.log(err);
+		monitorFilesystem();
+	}
+);
+
+function monitorFilesystem() {
+	dir_info.syncDBWithFS(serverConfig.data.dbName, serverConfig.data.basepath,  function(err, data) {
+		serverConfig.data.files = data;
+		db.save(serverConfig.data.dbName, serverConfig.data.files, function (err) {
+			console.log('server fs event ' + new Date());
+		});
+	});
+}
+
+dir_info.syncDBWithFS(serverConfig.data.dbName, serverConfig.data.basepath,  function(err, data) {
 	if (err) throw err;
-	files = data;
-	console.log('synced db with fs');
-	app.listen(25811, function(){
+	serverConfig.files = data;
+	app.listen(serverConfig.data.port, function(){
 		console.log("mycloud server listening on port %d in %s mode", app.address().port, app.settings.env);
 	});
 });

@@ -5,8 +5,9 @@ var querystring = require('querystring');
 var request = require('request');
 var stalker = require('stalker');
 
-var dir_info = require('../common-lib/dir_info.js');
-var utils = require('../common-lib/utils.js');
+var db = require('./lib/db.js');
+var dir_info = require('./lib/dir_info.js');
+var utils = require('./lib/utils.js');
 
 var file_download = require('./lib/file_download.js');
 var file_upload = require('./lib/file_upload.js');
@@ -31,11 +32,11 @@ stalker.watch(
 	{buffer: config.fs_event_timeout}, 
 	function (err, file) {
 		if (err) console.log(err);
-		monitorFilesystem(config.basepath);
+		monitorFilesystem();
 	},
 	function (err, file) {
 		if (err) console.log(err);
-		monitorFilesystem(config.basepath);
+		monitorFilesystem();
 	}
 );
 
@@ -215,10 +216,10 @@ var syncServerToClient = function (clientList, serverList, callback) {
 };
 
 var syncing = false;
-var monitorFilesystem = function (path) {
+var monitorFilesystem = function () {
 	if (syncing) return;
 	syncing = true;
-	dir_info.syncDBWithFS(path, function(err, dbList) {
+	dir_info.syncDBWithFS('files', config.basepath, function(err, dbList) {
 		if (err) throw err;
 		cookieJar = request.jar();
 		request.post({url: config.url + '/login', form: config.credentials, jar: cookieJar}, function _login(error, response, body) {
@@ -230,8 +231,11 @@ var monitorFilesystem = function (path) {
 						syncWithServer(dbList, serverList, function(err) {
 							request.get({url: config.url + '/logout', jar: cookieJar}, function _logout(error, response, body) {
 								if (!error && response.statusCode == 200) {
-									console.log('\n' + new Date() + '\n');
-									syncing = false;
+									db.save('files', dbList, function (err) {
+										console.log('\n' + new Date() + '\n');
+										setTimeout(monitorFilesystem, 10000);
+										syncing = false;
+									});
 								}
 							});							
 						});
