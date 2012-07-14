@@ -153,11 +153,11 @@ app.post('/file*', authRequired, routes.formUploadData);
 app.put('/file*', authRequired, routes.renameFile);
 app.del('/file*', authRequired, routes.deleteFile);
 
-app.get('/filelist', authRequired, routes.filelist);
+app.get('/list', authRequired, routes.filelist);
 
 dir_info.syncDBWithFS(serverConfig.data.dbName, serverConfig.data.basepath,  function(err, data) {
 	if (err) throw err;
-	serverConfig.files = data;
+	serverConfig.data.files = data;
 	app.listen(serverConfig.data.port, function(){
 		console.log("mycloud server listening on port %d in %s mode", app.address().port, app.settings.env);
 	});

@@ -225,7 +225,7 @@ var monitorFilesystem = function () {
 		request.post({url: config.url + '/login', form: config.credentials, jar: cookieJar}, function _login(error, response, body) {
 			if (!error && response.statusCode == 200) {
 				config.cookie = cookieJar.cookies[0].name + '=' + cookieJar.cookies[0].value;
-				request({url: config.url + '/filelist', jar: cookieJar}, function _getServerFileList(error, response, body) {
+				request({url: config.url + '/list', jar: cookieJar}, function _getServerFileList(error, response, body) {
 					if (!error && response.statusCode == 200) {
 						var serverList = JSON.parse(body);
 						syncWithServer(dbList, serverList, function(err) {
