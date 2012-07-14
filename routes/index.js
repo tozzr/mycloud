@@ -1,31 +1,23 @@
 var fs = require('fs');
-var login = require('./login.js');
 
 var utils = require('../lib/utils.js');
 var dir_info = require('../lib/dir_info.js');
 var db = require('../lib/db.js');
 
-var serverConfig = require('../serverConfig');
-
-exports.loginForm = login.form;
-exports.loginAuth = login.auth;
-exports.logout = login.logout;
-exports.authRequired = login.authRequired;
+var serverConfig = require('../serverConfig.js');
 
 exports.index = function (req, res) {
 	res.render('index', { title: 'myCloud' });
 };
 
-exports.files = function(req, res){
+exports.listDirEntries = function(req, res){
 	var dir = utils.dirFromParam(req.params[0]);
 	var parentdir = utils.parentdirFromPath(dir);
   
 	var path = serverConfig.data.basepath + dir;
-	console.log('list: ' + path);
 	var stats = fs.statSync(path);
   
 	if (stats.isDirectory()) {
-		res.writeHead(200, {'Content-Type': 'application/json'});
 		var data = new Object();
 		fs.readdir(path, function(err, files) {
 			var dirInfos = new Array();
@@ -47,11 +39,7 @@ exports.files = function(req, res){
 						});
 				}
 			}
-			data['dirs'] = dirInfos;
-			data['files'] = fileInfos;
-			data['parentdir'] = parentdir;
-			res.end( JSON.stringify(data) );
-			//res.render('index', { title: 'myCloud', dirpath: dir, parentdir: parentdir, dirs: dirInfos, files: fileInfos, user: req.session.user });
+			res.render('direntries', { title: 'myCloud', dirpath: dir, parentdir: parentdir, dirs: dirInfos, files: fileInfos, user: req.user.name });
 		});
 	}
 	else {
@@ -59,10 +47,50 @@ exports.files = function(req, res){
 	}
 };
 
+exports.createDirectory = function(req, res) {
+	var dir = utils.dirFromParam(req.params[0]);
+	var path = serverConfig.data.basepath + dir + '/' + req.body.newDirName;
+	
+	fs.mkdir(path, 0755, function(err) {
+		console.log('create dir ok');
+		res.writeHead(200, {'Content-Type': 'text/plain'});
+		res.end('ok');
+	});
+};
+exports.renameDirectory = function(req, res) {
+	var dir = utils.dirFromParam(req.params[0]);
+	var parentdir = utils.parentdirFromPath(dir);
+	
+	var oldpath = serverConfig.data.basepath + dir;
+	var newpath = serverConfig.data.basepath + parentdir + '/' + req.body.rename;
+	console.log(oldpath + ' ' + newpath);
+	fs.rename(oldpath, newpath, function (err) {
+		res.writeHead(200, {'Content-Type': 'text/plain'});
+		res.end('ok');
+	});
+};
+exports.deleteDirectory = function(req, res) {
+	var dir = utils.dirFromParam(req.params[0]);
+	var parentdir = utils.parentdirFromPath(dir);
+	var path = serverConfig.data.basepath + dir;
+	
+	utils.rmdirRecursive(path);
+	res.writeHead(200, {'Content-Type': 'text/plain'});
+	res.end('ok');
+};
+
 exports.filelist = function(req, res) {
 	serverConfig.data.files.status = 'ok';
 	res.writeHead(200, {'Content-Type': 'application/json'});
 	res.end( JSON.stringify(serverConfig.data.files) );
+};
+
+exports.downloadFile = function(req, res){
+	var dir = utils.dirFromParam(req.params[0]);
+	var parentdir = utils.parentdirFromPath(dir);
+  
+	var path = serverConfig.data.basepath + dir;
+	res.download(path, dir);
 };
 
 exports.formUploadData = function(req, res) {
@@ -81,7 +109,8 @@ exports.formUploadData = function(req, res) {
 		return;
 	}
 	
-	var path = dir + decodeURI(req.files.uploadfile.name);
+	var path = dir + '/' + decodeURI(req.files.uploadfile.name);
+	//console.log('path: ' + path);
 	var target_path = serverConfig.data.basepath + path;
 	console.log('upload: ' + target_path);
 	var target_file = fs.createWriteStream(target_path);
@@ -105,39 +134,42 @@ exports.formUploadData = function(req, res) {
 	});
 	tmp_file.on('close', function() { target_file.end(); });
 };
-
-exports.deleteFile = function (req, res) {
-	var path = utils.dirFromParam(req.params[0]);
-	var filepath = serverConfig.data.basepath + path;
-	console.log(new Date().getTime() + ': delete ' + filepath);
-	fs.unlink(filepath, function(error) {
-		serverConfig.data.files[path].state = 'deleted';
-		serverConfig.data.files[path].version = parseInt(serverConfig.data.files[path].version) + 1;
-		db.save(serverConfig.data.dbName, serverConfig.data.files, function (err) {
-			res.writeHead(200, {'Content-Type': 'text/plain'});
-			res.end('ok');
-		});
-    });
-};
-
-exports.createDirectory = function(req, res) {
+exports.renameFile = function(req, res) {
 	var dir = utils.dirFromParam(req.params[0]);
-	var path = serverConfig.data.basepath + dir + '\\' + req.body.newDirName;
+	var parentdir = utils.parentdirFromPath(dir);
 	
-	fs.mkdir(path, 0755, function(err) {
+	var oldpath = serverConfig.data.basepath + dir;
+	var newpath = serverConfig.data.basepath + parentdir + '/' + req.body.rename;
+	
+	fs.rename(oldpath, newpath, function (err) {
 		res.writeHead(200, {'Content-Type': 'text/plain'});
 		res.end('ok');
 	});
 };
-
-exports.deleteDirectory = function(req, res) {
-	var dir = utils.dirFromParam(req.params[0]);
-	var parentdir = utils.parentdirFromPath(dir);
-	var path = serverConfig.data.basepath + dir;
-	
-	utils.rmdirRecursive(path);
-	res.writeHead(200, {'Content-Type': 'text/plain'});
-	res.end('ok');
+exports.deleteFile = function (req, res) {
+	var path = utils.dirFromParam(req.params[0]);
+	console.log(serverConfig.data.basepath);
+	console.log(path);
+	var filepath = serverConfig.data.basepath + path;
+	console.log(new Date().getTime() + ': delete ' + filepath);
+	//console.log(JSON.stringify(serverConfig));
+	fs.unlink(filepath, function(error) {
+		if (error) console.log(error);
+		if (!serverConfig.data || !serverConfig.data.files || serverConfig.data.files[path]) {
+			console.log(path + ' not in db!!!');
+			res.writeHead(200, {'Content-Type': 'text/plain'});
+			res.end('ok');
+		}
+		else {
+			console.log(JSON.stringify(serverConfig.data));
+			//serverConfig.data.files[path].state = 'deleted';
+			//serverConfig.data.files[path].version = parseInt(serverConfig.data.files[path].version) + 1;
+			//db.save(serverConfig.data.dbName, serverConfig.data.files, function (err) {
+				res.writeHead(200, {'Content-Type': 'text/plain'});
+				res.end('ok');
+			//});
+		}
+    });
 };
 
 /*

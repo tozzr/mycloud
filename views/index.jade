@@ -1,34 +1,15 @@
-#header(style='display:none;')
-	h1= 'myCloud'
-	a(id='logout', href='javascript:;') logout
-	a(href='/user') logged in as user |&nbsp;
-	br
-	br
+#header
+	h1= 'myCloud ' 
 	h2#dirpath
+	a(id='loginLink', href='javascript:;', class='service') login
 
-#action(style='display:none;')
-	a(id='createDir', href='javascript:;')= 'new directory' 
-	a(id='newFile', href='javascript:;')= 'upload file'
+#teaser
+	p Welcome to myCloud. It's free, open source and best way to host files.
+		
 
 #loginDialog(style='display: none;', title='login')
+	#loginErrors(style='color: red; display: none;')= 'Login failed. Please try again.'
 	form(id='loginForm', name='loginForm', method='post', action='/login')
-		input(type='text', name='username')
+		input(type='text', name='login', value='admin')
 		br
-		input(type='password', name='password')
-		
-#newDirDialog(style='display: none;', title='new directory')
-	form(id='newDirForm', method='post', action='javascript:;')
-		input(id='newDirName', type='text', name='newDirName')
-
-form(id='deleteItemForm', method='post', action='javascript:;')
-	input(type='hidden', name='_method', value='DELETE')
-	
-table(id='fileTable',cellspacing=0, style='display: none;')
-	tr(class='parent')
-		td(class='icon')
-			img(src='/images/up.png', width=16, height=16)
-		td
-			a(href='javascript:;',class='parentdir')= 'parent directory'
-		td(class='size')
-		td
-		
+		input(type='password', name='password', value='password')

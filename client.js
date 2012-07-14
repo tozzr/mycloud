@@ -17,7 +17,7 @@ var config = {
 	port: 25811,
 	url: 'http://localhost:25811',
 	credentials: {
-		username: 'admin',
+		login: 'admin',
 		password: 'password'
 	},
 	basepath: 'F:\\tmp\\mycloud_client',

@@ -1,10 +1,11 @@
 body {
   padding: 5px 25px 25px 25px;
-  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  font: 1.0em "Lucida Grande", Helvetica, Arial, sans-serif;
   margin: 0px;
+  color: #060;
 }
 a {
-  color: #111;
+  color: #060;
   text-decoration: none;
 }
 div#login {
@@ -15,33 +16,39 @@ div#login {
 div#header {
   padding-bottom: 15px;
 }
-div#header h1,
-h2 {
+div#header h1 {
   display: inline;
+  font-size: 1.0em;
+  padding-right: 0.5em;
+  margin-top: -15px;
+ }
+div#header h2 {
+	display: inline;
+	fon-size: 0.9em;
 }
-div#header a {
+div#header a  {
   float: right;
-  padding: 15px;
+  padding-right: 0.5em;
   display: block;
+  font-size: 1.0em;
 }
-div#action a {
+div#header a.action {
   float: left;
-  padding-right: 15px;
+  display: inline;
+  font-size: 1.0em;
 }
 table {
   padding: 0px;
   width: 100%;
-}
-table tr.parent td {
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
-}
-table tr.row:hover {
-  background-color: #eee;
+  margin-top: 1.0em;
+  border-top: 1px solid #eee;
 }
 table tr td {
   padding: 10px 10px 10px 0px;
   margin: 3px;
+}
+table tr:hover {
+  background-color: #eee;
 }
 table tr td.icon {
   width: 18px;
@@ -51,4 +58,24 @@ table tr td.size {
 }
 table tr td a {
   display: block;
+}
+table tr td a.entry {
+	width: 84%;
+	float: left;
+}
+table tr td a.deleteDir, a.deleteFile {
+	width: 1.0em;
+	float: right;
+	display: none;
+}
+table tr td a.rename {
+	width: 15%;
+	display: none;
+	float: right;
+}
+table tr td a.delete {
+	display: none;
+}
+table tr:hover td a {
+	display: block;
 }

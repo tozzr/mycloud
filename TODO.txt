@@ -1,0 +1,4 @@
+TODO:
+
+- multi-user: each user has own basedir
+- integrate with nStore for db purposes

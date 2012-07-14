@@ -1,0 +1,60 @@
+#header
+	h1= 'myCloud '
+	h2#dirpath= dirpath
+	a(id='logout', href='/logout', class='service') | logout
+	a(href='/user', class='service')= 'logged in as ' + user.name
+	br
+	br
+	a(id='createDir', href='javascript:;', class='action')= 'new directory' 
+	a(id='newFile', href='javascript:;', class='action')= 'upload file'
+	if dirpath != ''
+		a(href='/dir'+parentdir,class='parentdir')= 'parent directory'
+			img(src='/images/up.png', width=16, height=16)
+		
+#newDirDialog(style='display: none;', title='new directory')
+	form(id='newDirForm', method='post', action='javascript:;')
+		input(id='new_target', type='hidden', name='target', value='/dir'+dirpath)
+		input(id='newDirName', type='text', name='newDirName')
+
+#renameDialog(style='display: none;', title='rename')
+	form(id='renameForm', method='post', action='javascript:;')
+		input(type='hidden', name='_method', value='PUT')
+		input(id='rename_target', type='hidden', name='target', value='')
+		input(id='rename', type='text', name='rename')
+		
+form(id='deleteItemForm', method='post', action='javascript:;')
+	input(type='hidden', name='_method', value='DELETE')
+	
+table(id='fileTable',cellspacing=0)
+	colgroup
+		col(width='16')
+		col(width='*')
+		col(width='15%')
+		col(width='16')
+	
+	each dir in dirs
+		tr(class='dir')
+			td(class='icon')
+				img(src='/images/folder.png', width=16, height=16)
+			td
+				a(class='entry', href='/dir'+dir.path)= dir.name
+				a(class='rename', href='javascript:;', rel='/dir'+dir.path)= 'rename'
+			td(class='size')
+			td
+				a(class='delete', href='javascript:;', rel='/dir'+dir.path, title='delete ' + dir.name)= 'x'
+	
+	each file in files
+		tr
+			td(class='icon')
+				img(src='/images/'+file.icon+'.png', width=16, height=16)
+			td
+				a(class='entry', href='/file'+file.path)= file.name
+				a(class='rename', href='javascript:;', rel='/file'+file.path)= 'rename'
+			td(class='size')= file.size
+			td
+				a(class='delete', href='javascript:;', rel='/file/'+file.path, title='delete ' + file.name)= 'x'
+		
+	if (dirs.length == 0 && files.length == 0)
+		tr
+			td(colspan='4')= 'no files'
+				
