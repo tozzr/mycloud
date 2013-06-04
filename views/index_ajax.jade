@@ -1,40 +1,43 @@
-#header(style='display:none;')
-	// #user-id= user.name
-	h1= 'myCloud ' 
-	h2#dirpath
-	a(id='logout', href='javascript:;', class='service') logout
-	a(href='/user', class='service') logged in as user |&nbsp;
-	br
-	br
-	a(id='createDir', href='javascript:;', class='action')= 'new directory' 
-	a(id='newFile', href='javascript:;', class='action')= 'upload file'
-	
+extends layout
 
-#loginDialog(style='display: none;', title='login')
-	#loginErrors(style='color: red; display: none;')= 'Login failed. Please try again.'
-	form(id='loginForm', name='loginForm', method='post', action='/login')
-		input(type='text', name='login', value='admin')
+block content
+	#header(style='display:none;')
+		// #user-id= user.name
+		h1= 'myCloud ' 
+		h2#dirpath
+		a(id='logout', href='javascript:;', class='service') logout
+		a(href='/user', class='service') logged in as user |&nbsp;
 		br
-		input(type='password', name='password', value='password')
+		br
+		a(id='createDir', href='javascript:;', class='action')= 'new directory' 
+		a(id='newFile', href='javascript:;', class='action')= 'upload file'
 		
-#newDirDialog(style='display: none;', title='new directory')
-	form(id='newDirForm', method='post', action='javascript:;')
-		input(id='newDirName', type='text', name='newDirName')
 
-form(id='deleteItemForm', method='post', action='javascript:;')
-	input(type='hidden', name='_method', value='DELETE')
-	
-table(id='fileTable',cellspacing=0, style='display: none;')
-	colgroup
-		col(width='5%')
-		col(width='75%')
-		col(width='15%')
-		col(width='5%')
-	tr(class='parent')
-		td(class='icon')
-			img(src='/images/up.png', width=16, height=16)
-		td
-			a(href='javascript:;',class='parentdir')= 'parent directory'
-		td(class='size')
-		td
+	#loginDialog(style='display: none;', title='login')
+		#loginErrors(style='color: red; display: none;')= 'Login failed. Please try again.'
+		form(id='loginForm', name='loginForm', method='post', action='/login')
+			input(type='text', name='login', value='admin')
+			br
+			input(type='password', name='password', value='password')
+			
+	#newDirDialog(style='display: none;', title='new directory')
+		form(id='newDirForm', method='post', action='javascript:;')
+			input(id='newDirName', type='text', name='newDirName')
+
+	form(id='deleteItemForm', method='post', action='javascript:;')
+		input(type='hidden', name='_method', value='DELETE')
 		
+	table(id='fileTable',cellspacing=0, style='display: none;')
+		colgroup
+			col(width='5%')
+			col(width='75%')
+			col(width='15%')
+			col(width='5%')
+		tr(class='parent')
+			td(class='icon')
+				img(src='/images/up.png', width=16, height=16)
+			td
+				a(href='javascript:;',class='parentdir')= 'parent directory'
+			td(class='size')
+			td
+			

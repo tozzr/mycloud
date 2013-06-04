@@ -1,15 +1,18 @@
-#header
-	h1= 'myCloud ' 
-	h2#dirpath
-	a(id='loginLink', href='javascript:;', class='service') login
+extends layout
 
-#teaser
-	p Welcome to myCloud. It's free, open source and best way to host files.
-		
+block content
+	#header
+		h1= 'myCloud ' 
+		h2#dirpath
+		a(id='loginLink', href='javascript:;', class='service') login
 
-#loginDialog(style='display: none;', title='login')
-	#loginErrors(style='color: red; display: none;')= 'Login failed. Please try again.'
-	form(id='loginForm', name='loginForm', method='post', action='/login')
-		input(type='text', name='login', value='admin')
-		br
-		input(type='password', name='password', value='password')
+	#teaser
+		p Welcome to myCloud. It's free, open source and best way to host files.
+			
+
+	#loginDialog(style='display: none;', title='login')
+		#loginErrors(style='color: red; display: none;')= 'Login failed. Please try again.'
+		form(id='loginForm', name='loginForm', method='post', action='/login')
+			input(type='text', name='login', value='admin')
+			br
+			input(type='password', name='password', value='password')

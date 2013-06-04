@@ -1,5 +1,5 @@
 var express = require('express')
-  , everyauth = require('everyauth')
+  , everyauth = require('everyauth-express3')
   , routes = require('./routes')
   , fs = require('fs');
 // nStore !!!
@@ -101,9 +101,9 @@ everyauth.everymodule.findUserById( function (userId, callback) {
   // callback has the signature, function (err, user) {...}
 });
 
-var app = module.exports = express.createServer();
+var app = module.exports = express();
 
-everyauth.helpExpress(app);
+//everyauth.helpExpress(app);
 
 var authRequired = function(req, res, next) {
 	if (req.loggedIn) {
@@ -128,7 +128,7 @@ app.configure(function(){
   app.use(express.session({ secret: "mycloud 2012" }));
   app.use(express.methodOverride());
   //app.use(require('stylus').middleware({ src: __dirname + '/public' }));
-  app.use(everyauth.middleware());
+  app.use(everyauth.middleware(app));
   app.use(app.router);
 });
 
@@ -156,9 +156,9 @@ app.del('/file*', authRequired, routes.deleteFile);
 app.get('/list', authRequired, routes.filelist);
 
 dir_info.syncDBWithFS(serverConfig.data.dbName, serverConfig.data.basepath,  function(err, data) {
-	if (err) throw err;
+	if (err) console.log(err);
 	serverConfig.data.files = data;
 	app.listen(serverConfig.data.port, function(){
-		console.log("mycloud server listening on port %d in %s mode", app.address().port, app.settings.env);
+		console.log("mycloud server listening on port %d in %s mode", serverConfig.data.port, app.settings.env);
 	});
 });
